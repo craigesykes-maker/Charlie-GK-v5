@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <title>Charlie's Goalkeeper xG</title>
+  <!-- iOS Home Screen app support: makes it launch full-screen (no Safari address bar) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Charlie GK" />
+  <meta name="theme-color" content="#0f1713" />
+  <style>
+    :root{
+      --bg:#0f1713;
+      --panel:#18221d;
+      --panel-edge:#2c3a33;
+      --turf-deep:#0f1713;
+      --turf-mid:#1d2c25;
+      --chalk:#f5f2ea;
+      --chalk-dim:#a9b1ab;
+      --goal-amber:#e8a33d;
+      --save-green:#5ba87c;
+      --block-blue:#5b8aa8;
+      --off-grey:#8b8478;
+      --net-grey:#202824;
+      --ink:#101010;
+      --shadow:0 8px 24px rgba(0,0,0,.22);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--chalk);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+
+    .app{
+      max-width:860px;
+      margin:0 auto;
+      min-height:100vh;
+      min-height:100dvh;
+      display:flex;
+      flex-direction:column;
+      padding-top:env(safe-area-inset-top);
+      padding-bottom:env(safe-area-inset-bottom);
+      padding-left:env(safe-area-inset-left);
+      padding-right:env(safe-area-inset-right);
+    }
+
+    header{
+      padding:18px 18px 14px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      border-bottom:2px solid var(--panel-edge);
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .brand-eyebrow{
+      font-family:monospace;
+      font-size:10px;
+      letter-spacing:.18em;
+      color:var(--chalk-dim);
+      text-transform:uppercase;
+      margin-bottom:2px;
+    }
+
+    .brand{
+      font-size:24px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    nav.tabs{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+
+    .tab-btn,.filter-btn,.new-match-btn,.off-target-btn,.del-match,.export-btn{
+      cursor:pointer;
+    }
+
+    .tab-btn,.filter-btn{
+      font-family:monospace;
+      font-size:10px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background:transparent;
+      border:1.5px solid var(--panel-edge);
+      color:var(--chalk-dim);
+      padding:7px 10px;
+      border-radius:20px;
+    }
+
+    .tab-btn.active,.filter-btn.active{
+      background:var(--chalk);
+      color:var(--turf-deep);
+      border-color:var(--chalk);
+      font-weight:700;
+    }
+
+    main{
+      flex:1;
+      padding:16px;
+      padding-bottom:32px;
+    }
+
+    section{display:none}
+    section.active{display:block}
+
+    .matchbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background:var(--panel);
+      border:1px solid var(--panel-edge);
+      border-radius:14px;
+      padding:10px 14px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+
+    .opp-wrap{
+      flex:1;
+      min-width:220px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .matchbar input{
+      background:transparent;
+      border:none;
+      color:var(--chalk);
+      font-weight:700;
+      font-size:15px;
+      width:100%;
+      outline:none;
+    }
+
+    .matchbar input::placeholder{color:var(--chalk-dim)}
+
+    .vs-divider{
+      font-family:monospace;
+      color:var(--goal-amber);
+      font-size:11px;
+      padding:0 4px;
+      flex-shrink:0;
+    }
+
+    .age-badge{
+      background:rgba(232,163,61,.12);
+      color:var(--goal-amber);
+      border:1px solid rgba(232,163,61,.5);
+      border-radius:999px;
+      padding:5px 8px;
+      font-size:11px;
+      font-family:monospace;
+      white-space:nowrap;
+    }
+
+    .new-match-btn,.export-btn{
+      background:var(--goal-amber);
+      color:var(--ink);
+      border:none;
+      border-radius:10px;
+      padding:9px 12px;
+      font-family:monospace;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+
+    .export-btn{
+      background:var(--save-green);
+    }
+
+    .top-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .stat-strip{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;
+      margin-bottom:16px;
+    }
+
+    .stat-chip{
+      background:var(--panel);
+      border:1px solid var(--panel-edge);
+      border-radius:12px;
+      padding:10px 6px;
+      text-align:center;
+    }
+
+    .stat-chip .num{
+      font-size:22px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    .stat-chip .lbl{
+      font-family:monospace;
+      font-size:9px;
+      letter-spacing:.05em;
+      color:var(--chalk-dim);
+      text-transform:uppercase;
+      margin-top:4px;
+    }
+
+    .stat-chip.saves .num{color:var(--save-green)}
+    .stat-chip.goals .num{color:var(--goal-amber)}
+
+    .pitch-wrap,.heatgrid-wrap,.summary-hero,.match-card,.goal-wrap{
+      box-shadow:var(--shadow);
+    }
+
+    .pitch-wrap{
+      background:var(--turf-mid);
+      border:2px solid var(--panel-edge);
+      border-radius:16px;
+      padding:10px;
+      margin-bottom:14px;
+    }
+
+    .pitch-title,.section-label,.log-title{
+      font-family:monospace;
+      font-size:10px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:var(--chalk-dim);
+      margin-bottom:8px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .pitch-title .step{color:var(--goal-amber);font-weight:700}
+
+    svg.pitch,svg.goalmouth,svg.heatgrid{
+      width:100%;
+      height:auto;
+      display:block;
+      touch-action:none;
+      cursor:crosshair;
+    }
+
+    .pitch-hint{
+      font-family:monospace;
+      font-size:10.5px;
+      color:var(--chalk-dim);
+      text-align:center;
+      margin-top:8px;
+      min-height:14px;
+    }
+
+    .goal-wrap{
+      background:var(--net-grey);
+      border-radius:16px;
+      padding:14px;
+      margin-bottom:14px;
+      display:none;
+    }
+
+    .goal-wrap.active{display:block}
+
+    .off-target-btn{
+      width:100%;
+      margin-top:10px;
+      background:transparent;
+      border:1.5px dashed var(--chalk-dim);
+      color:var(--chalk-dim);
+      font-family:monospace;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      padding:10px;
+      border-radius:10px;
+    }
+
+    .outcome-wrap{display:none;margin-bottom:14px}
+    .outcome-wrap.active{display:block}
+
+    .outcome-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .outcome-btn{
+      border:none;
+      border-radius:14px;
+      padding:18px 10px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:4px;
+      box-shadow:var(--shadow);
+    }
+
+    .outcome-btn .icon{font-size:22px}
+    .outcome-btn.save{background:var(--save-green);color:#0e2418}
+    .outcome-btn.goal{background:var(--goal-amber);color:#2b1b05}
+    .outcome-btn.block{background:var(--block-blue);color:#0a1e2b}
+    .outcome-btn.parry{background:#7c9d6e;color:#11210b}
+
+    .cancel-shot{
+      width:100%;
+      margin-top:10px;
+      background:transparent;
+      border:none;
+      color:var(--chalk-dim);
+      font-family:monospace;
+      font-size:10.5px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      padding:8px;
+      cursor:pointer;
+    }
+
+    .xg-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:rgba(232,163,61,.15);
+      border:1px solid var(--goal-amber);
+      color:var(--goal-amber);
+      font-family:monospace;
+      font-size:11px;
+      font-weight:700;
+      padding:4px 10px;
+      border-radius:20px;
+    }
+
+    .shot-row{
+      display:grid;
+      grid-template-columns:40px 1fr auto auto;
+      gap:10px;
+      align-items:center;
+      padding:9px 10px;
+      border-bottom:1px solid var(--panel-edge);
+      font-family:monospace;
+      font-size:11.5px;
+    }
+
+    .shot-row .n{color:var(--chalk-dim)}
+    .shot-row .res{
+      font-weight:700;
+      text-transform:uppercase;
+      font-size:10px;
+      padding:3px 8px;
+      border-radius:6px;
+      text-align:center;
+    }
+
+    .shot-row .res.SAVE{background:rgba(91,168,124,.2);color:var(--save-green)}
+    .shot-row .res.GOAL{background:rgba(232,163,61,.2);color:var(--goal-amber)}
+    .shot-row .res.BLOCK{background:rgba(91,138,168,.2);color:var(--block-blue)}
+    .shot-row .res.PARRY{background:rgba(124,157,110,.2);color:#9bc189}
+    .shot-row .res.OFF_TARGET{background:rgba(139,132,120,.2);color:var(--off-grey)}
+
+    .empty-state{
+      text-align:center;
+      padding:30px 10px;
+      color:var(--chalk-dim);
+      font-family:monospace;
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    .empty-state .big{
+      font-size:16px;
+      color:var(--chalk);
+      font-weight:900;
+      margin-bottom:6px;
+    }
+
+    .summary-hero{
+      background:var(--panel);
+      border:1px solid var(--panel-edge);
+      border-radius:16px;
+      padding:18px;
+      margin-bottom:14px;
+      text-align:center;
+    }
+
+    .summary-hero .pct{
+      font-size:52px;
+      line-height:1;
+      color:var(--save-green);
+      font-weight:900;
+    }
+
+    .summary-hero .pct-lbl{
+      font-family:monospace;
+      font-size:10px;
+      letter-spacing:.1em;
+      color:var(--chalk-dim);
+      text-transform:uppercase;
+      margin-top:6px;
+    }
+
+    .xg-compare{
+      display:flex;
+      justify-content:center;
+      gap:24px;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
+
+    .xg-compare .v{
+      font-size:24px;
+      font-weight:900;
+    }
+
+    .xg-compare .l{
+      font-family:monospace;
+      font-size:9px;
+      color:var(--chalk-dim);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .xg-delta{
+      margin-top:10px;
+      font-family:monospace;
+      font-size:11px;
+      padding:5px 12px;
+      border-radius:20px;
+      display:inline-block;
+    }
+
+    .xg-delta.pos{background:rgba(91,168,124,.2);color:var(--save-green)}
+    .xg-delta.neg{background:rgba(232,163,61,.2);color:var(--goal-amber)}
+
+    .heatgrid-wrap{
+      background:var(--net-grey);
+      border-radius:16px;
+      padding:16px;
+      margin-bottom:14px;
+    }
+
+    .heatgrid-legend{
+      display:flex;
+      justify-content:center;
+      gap:14px;
+      margin-top:10px;
+      font-family:monospace;
+      font-size:9px;
+      color:var(--chalk-dim);
+      flex-wrap:wrap;
+    }
+
+    .heatgrid-legend span{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+
+    .swatch{
+      width:9px;
+      height:9px;
+      border-radius:2px;
+      display:inline-block;
+    }
+
+    .filter-row{
+      display:flex;
+      gap:6px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+
+    .match-card{
+      background:var(--panel);
+      border:1px solid var(--panel-edge);
+      border-radius:14px;
+      padding:14px 16px;
+      margin-bottom:10px;
+      cursor:pointer;
+    }
+
+    .match-card-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:8px;
+      gap:8px;
+    }
+
+    .match-card .opp{
+      font-size:16px;
+      font-weight:900;
+    }
+
+    .match-card .date{
+      font-family:monospace;
+      font-size:10px;
+      color:var(--chalk-dim);
+    }
+
+    .match-card-stats{
+      display:flex;
+      gap:16px;
+      font-family:monospace;
+      font-size:11px;
+      color:var(--chalk-dim);
+      flex-wrap:wrap;
+    }
+
+    .match-card-stats b{
+      color:var(--chalk);
+      font-size:13px;
+    }
+
+    .del-match{
+      background:none;
+      border:1px solid var(--panel-edge);
+      color:var(--chalk-dim);
+      font-family:monospace;
+      font-size:9px;
+      padding:4px 8px;
+      border-radius:8px;
+      text-transform:uppercase;
+    }
+
+    footer{
+      text-align:center;
+      padding:18px;
+      font-family:monospace;
+      font-size:9.5px;
+      color:var(--chalk-dim);
+      opacity:.6;
+    }
+
+    @media (max-width:700px){
+      .stat-strip{grid-template-columns:repeat(2,1fr)}
+      .outcome-grid{grid-template-columns:1fr}
+      .shot-row{grid-template-columns:34px 1fr auto}
+      .shot-row .xg{grid-column:2/3}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <div class="brand-eyebrow">Goalkeeper Tracker</div>
+        <div class="brand">Charlie's Goalkeeper xG</div>
+      </div>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="live">Live</button>
+        <button class="tab-btn" data-tab="stats">Stats</button>
+        <button class="tab-btn" data-tab="history">History</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="tab-live" class="active">
+        <div class="matchbar">
+          <div class="opp-wrap">
+            <input id="oppInput" type="text" placeholder="Opponent name..." maxlength="30">
+            <span class="vs-divider">U11</span>
+            <span class="age-badge" id="currentMatchLabel">Current match</span>
+          </div>
+          <div class="top-actions">
+            <button class="export-btn" id="exportCsvBtn">Export CSV</button>
+            <button class="new-match-btn" id="newMatchBtn">New Match</button>
+          </div>
+        </div>
+
+        <div class="stat-strip">
+          <div class="stat-chip saves">
+            <div class="num" id="liveSaves">0</div>
+            <div class="lbl">Saves</div>
+          </div>
+          <div class="stat-chip goals">
+            <div class="num" id="liveGoals">0</div>
+            <div class="lbl">Goals</div>
+          </div>
+          <div class="stat-chip">
+            <div class="num" id="liveShots">0</div>
+            <div class="lbl">Shots</div>
+          </div>
+          <div class="stat-chip">
+            <div class="num" id="liveXg">0.0</div>
+            <div class="lbl">xG Faced</div>
+          </div>
+        </div>
+
+        <div class="pitch-wrap">
+          <div class="pitch-title">
+            <span>Step <span class="step" id="stepNum">1</span> of 3 - Shot origin</span>
+            <span id="xgPreview"></span>
+          </div>
+          <svg class="pitch" id="pitchSvg" viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="pitch-hint" id="pitchHint">Tap where the shot was taken from</div>
+        </div>
+
+        <div class="goal-wrap" id="goalWrap">
+          <div class="pitch-title">
+            <span>Step 2 of 3 - Where it went</span>
+            <span class="xg-badge" id="xgBadgeGoal"></span>
+          </div>
+          <svg class="goalmouth" id="goalSvg" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg"></svg>
+          <button class="off-target-btn" id="offTargetBtn">Off target / wide / over</button>
+        </div>
+
+        <div class="outcome-wrap" id="outcomeWrap">
+          <div class="pitch-title">
+            <span>Step 3 of 3 - Outcome</span>
+          </div>
+          <div class="outcome-grid">
+            <button class="outcome-btn save" data-result="SAVE"><span class="icon">🧤</span>Saved</button>
+            <button class="outcome-btn goal" data-result="GOAL"><span class="icon">⚽</span>Goal</button>
+            <button class="outcome-btn parry" data-result="PARRY"><span class="icon">↩</span>Parried</button>
+            <button class="outcome-btn block" data-result="BLOCK"><span class="icon">⛔</span>Blocked (def.)</button>
+          </div>
+          <button class="cancel-shot" id="cancelShotBtn">Cancel this shot</button>
+        </div>
+
+        <div class="log-title">This match - shot log</div>
+        <div id="shotLogList"></div>
+      </section>
+
+      <section id="tab-stats">
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="current">This Match</button>
+          <button class="filter-btn" data-filter="season">Season (All)</button>
+        </div>
+
+        <div class="summary-hero">
+          <div class="pct" id="savePct">-</div>
+          <div class="pct-lbl">Save Percentage</div>
+
+          <div class="xg-compare">
+            <div>
+              <div class="v" id="sumShots">0</div>
+              <div class="l">Shots</div>
+            </div>
+            <div>
+              <div class="v" id="sumGoals">0</div>
+              <div class="l">Goals</div>
+            </div>
+            <div>
+              <div class="v" id="sumXg">0.0</div>
+              <div class="l">xG Faced</div>
+            </div>
+          </div>
+
+          <div class="xg-delta" id="xgDelta" style="display:none"></div>
+        </div>
+
+        <div class="heatgrid-wrap">
+          <div class="section-label">Goal-mouth shot map - where shots beat him</div>
+          <svg class="heatgrid" id="heatgridSvg" viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="heatgrid-legend">
+            <span><span class="swatch" style="background:var(--save-green)"></span>High save %</span>
+            <span><span class="swatch" style="background:var(--goal-amber)"></span>Low save %</span>
+            <span><span class="swatch" style="background:var(--off-grey)"></span>No shots yet</span>
+          </div>
+        </div>
+
+        <div class="heatgrid-wrap">
+          <div class="section-label">Shot origin map - where shots came from</div>
+          <svg class="heatgrid" id="originMapSvg" viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </section>
+
+      <section id="tab-history">
+        <div class="section-label">Season history</div>
+        <div id="historyList"></div>
+      </section>
+    </main>
+
+    <footer>Saved on this device only - no data leaves your phone</footer>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "charlies_goalkeeper_xg_v1";
+      const CURRENT_KEY = "charlies_goalkeeper_xg_current_match_id";
+
+      let matches = loadMatches();
+      let currentMatchId = localStorage.getItem(CURRENT_KEY) || null;
+      let pendingShot = null;
+      let statsFilter = "current";
+
+      if (matches.length === 0) {
+        const m = newMatch("");
+        currentMatchId = m.id;
+        persistAll();
+      } else if (!matches.find(m => m.id === currentMatchId)) {
+        currentMatchId = matches[0].id;
+        localStorage.setItem(CURRENT_KEY, currentMatchId);
+      }
+
+      function loadMatches() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          console.error("Failed to load matches", e);
+          return [];
+        }
+      }
+
+      let storageWarned = false;
+      function warnStorageFailure(e) {
+        console.error("Storage failed", e);
+        if (storageWarned) return;
+        storageWarned = true;
+        alert("Could not save your data on this device. If you're using Private Browsing, please turn it off so your matches and history are kept.");
+      }
+
+      function saveMatches() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(matches));
+        } catch (e) {
+          warnStorageFailure(e);
+        }
+      }
+
+      function persistAll() {
+        saveMatches();
+        try {
+          localStorage.setItem(CURRENT_KEY, currentMatchId || "");
+        } catch (e) {
+          warnStorageFailure(e);
+        }
+      }
+
+      function uid(prefix = "id") {
+        return prefix + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+      }
+
+      function newMatch(opponent = "") {
+        const m = {
+          id: uid("m"),
+          opponent,
+          date: new Date().toISOString(),
+          shots: []
+        };
+        matches.unshift(m);
+        persistAll();
+        return m;
+      }
+
+      function getCurrentMatch() {
+        return matches.find(m => m.id === currentMatchId) || null;
+      }
+
+      function calcXG(x, y) {
+        const goalLeft = 110, goalRight = 190, goalY = 4;
+        const goalCenterX = 150;
+        const dx = x - goalCenterX;
+        const dy = Math.max(y - goalY, 2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const angleToLeft = Math.atan2(goalLeft - x, dy);
+        const angleToRight = Math.atan2(goalRight - x, dy);
+        let angleWidth = Math.abs(angleToRight - angleToLeft);
+        if (angleWidth > Math.PI) angleWidth = 2 * Math.PI - angleWidth;
+
+        let xg = Math.exp(-distance / 55) * 0.85;
+        xg *= (0.4 + 0.6 * Math.min(angleWidth / 1.1, 1));
+        xg = Math.max(0.02, Math.min(xg, 0.93));
+        return xg;
+      }
+
+      function renderPitch() {
+        const svg = document.getElementById("pitchSvg");
+        let marks = "";
+        marks += '<rect x="0" y="0" width="300" height="220" fill="none"/>';
+        marks += '<rect x="40" y="0" width="220" height="120" fill="none" stroke="#F5F2EA" stroke-opacity="0.45" stroke-width="2.5"/>';
+        marks += '<rect x="105" y="0" width="90" height="45" fill="none" stroke="#F5F2EA" stroke-opacity="0.55" stroke-width="2.5"/>';
+        marks += '<circle cx="150" cy="84" r="2.5" fill="#F5F2EA" fill-opacity="0.7"/>';
+        marks += '<path d="M 110 120 A 40 40 0 0 0 190 120" fill="none" stroke="#F5F2EA" stroke-opacity="0.45" stroke-width="2.5"/>';
+        marks += '<rect x="120" y="-6" width="60" height="8" fill="#F5F2EA" fill-opacity="0.85" stroke="#15201B" stroke-width="1.5"/>';
+        marks += '<line x1="0" y1="218" x2="300" y2="218" stroke="#F5F2EA" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="5 5"/>';
+
+        const m = getCurrentMatch();
+        if (m) {
+          m.shots.forEach(s => {
+            const color =
+              s.result === "GOAL" ? "#E8A33D" :
+              s.result === "SAVE" ? "#5BA87C" :
+              s.result === "BLOCK" ? "#5B8AA8" :
+              s.result === "PARRY" ? "#9BC189" :
+              "#8B8478";
+            marks += '<circle cx="' + s.origin.x + '" cy="' + s.origin.y + '" r="4" fill="' + color + '" opacity="0.65" stroke="#000" stroke-width="0.5"/>';
+          });
+        }
+
+        if (pendingShot && pendingShot.origin) {
+          marks += '<circle cx="' + pendingShot.origin.x + '" cy="' + pendingShot.origin.y + '" r="7" fill="none" stroke="#fff" stroke-width="3"/>';
+          marks += '<circle cx="' + pendingShot.origin.x + '" cy="' + pendingShot.origin.y + '" r="3" fill="#fff"/>';
+        }
+
+        svg.innerHTML = marks;
+      }
+
+      function renderGoal() {
+        const svg = document.getElementById("goalSvg");
+        let marks = "";
+        marks += '<rect x="20" y="20" width="260" height="110" fill="none" stroke="#F5F2EA" stroke-opacity="0.65" stroke-width="3"/>';
+        marks += '<rect x="20" y="20" width="260" height="110" fill="rgba(245,242,234,0.06)"/>';
+
+        for (let i = 1; i < 8; i++) {
+          marks += '<line x1="' + (20 + i * 32.5) + '" y1="20" x2="' + (20 + i * 32.5) + '" y2="130" stroke="#F5F2EA" stroke-opacity="0.18" stroke-width="1.5"/>';
+        }
+        for (let i = 1; i < 5; i++) {
+          marks += '<line x1="20" y1="' + (20 + i * 22) + '" x2="280" y2="' + (20 + i * 22) + '" stroke="#F5F2EA" stroke-opacity="0.18" stroke-width="1.5"/>';
+        }
+
+        marks += '<line x1="0" y1="130" x2="300" y2="130" stroke="#F5F2EA" stroke-opacity="0.6" stroke-width="3"/>';
+
+        if (pendingShot && pendingShot.target) {
+          marks += '<circle cx="' + pendingShot.target.x + '" cy="' + pendingShot.target.y + '" r="8" fill="none" stroke="#fff" stroke-width="3"/>';
+          marks += '<circle cx="' + pendingShot.target.x + '" cy="' + pendingShot.target.y + '" r="3.5" fill="#fff"/>';
+        }
+
+        svg.innerHTML = marks;
+      }
+
+      function resetPending() {
+        pendingShot = null;
+        document.getElementById("stepNum").textContent = "1";
+        document.getElementById("pitchHint").textContent = "Tap where the shot was taken from";
+        document.getElementById("xgPreview").innerHTML = "";
+        document.getElementById("goalWrap").classList.remove("active");
+        document.getElementById("outcomeWrap").classList.remove("active");
+        document.getElementById("xgBadgeGoal").textContent = "";
+        renderPitch();
+        renderGoal();
+      }
+
+      function addShot(result) {
+        if (!pendingShot) return;
+        const m = getCurrentMatch();
+        if (!m) return;
+
+        const shot = {
+          id: uid("s"),
+          origin: pendingShot.origin,
+          target: pendingShot.target,
+          offTarget: pendingShot.offTarget,
+          xg: Math.round(pendingShot.xg * 100) / 100,
+          result,
+          time: new Date().toISOString()
+        };
+
+        m.shots.push(shot);
+        persistAll();
+        resetPending();
+        renderLiveStats();
+        renderShotLog();
+        renderStats();
+        renderHistory();
+      }
+
+      function describeOrigin(o) {
+        const dx = o.x - 150, dy = o.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let zone;
+        if (dist < 35) zone = "Close range";
+        else if (dist < 75) zone = "Box edge";
+        else zone = "Long range";
+
+        const side = Math.abs(dx) < 20 ? "central" : (dx < 0 ? "left side" : "right side");
+        return zone + ", " + side;
+      }
+
+      function renderShotLog() {
+        const m = getCurrentMatch();
+        const wrap = document.getElementById("shotLogList");
+        if (!m || m.shots.length === 0) {
+          wrap.innerHTML = '<div class="empty-state"><div class="big">No shots logged yet</div>Tap the pitch above to record the first one</div>';
+          return;
+        }
+
+        let html = "";
+        m.shots.slice().reverse().forEach((s, idx) => {
+          const n = m.shots.length - idx;
+          const label = s.result === "OFF_TARGET" ? "WIDE" : s.result;
+          html += '<div class="shot-row">' +
+            '<div class="n">#' + n + '</div>' +
+            '<div>' + describeOrigin(s.origin) + '</div>' +
+            '<div class="xg">xG ' + Number(s.xg).toFixed(2) + '</div>' +
+            '<div class="res ' + s.result + '">' + label + '</div>' +
+          '</div>';
+        });
+        wrap.innerHTML = html;
+      }
+
+      function renderLiveStats() {
+        const m = getCurrentMatch();
+        const shots = m ? m.shots : [];
+        const saves = shots.filter(s => s.result === "SAVE" || s.result === "PARRY").length;
+        const goals = shots.filter(s => s.result === "GOAL").length;
+        const totalXg = shots.reduce((a, s) => a + Number(s.xg || 0), 0);
+
+        document.getElementById("liveSaves").textContent = saves;
+        document.getElementById("liveGoals").textContent = goals;
+        document.getElementById("liveShots").textContent = shots.length;
+        document.getElementById("liveXg").textContent = totalXg.toFixed(1);
+        document.getElementById("oppInput").value = m ? (m.opponent || "") : "";
+
+        const label = m
+          ? ((m.opponent ? "vs " + m.opponent : "Unnamed match") + " - " + new Date(m.date).toLocaleDateString("en-GB"))
+          : "Current match";
+        document.getElementById("currentMatchLabel").textContent = label;
+      }
+
+      function getShotsForStats() {
+        if (statsFilter === "season") {
+          return matches.flatMap(m => m.shots || []);
+        }
+        const m = getCurrentMatch();
+        return m ? m.shots : [];
+      }
+
+      function renderStats() {
+        const shots = getShotsForStats();
+        const onTarget = shots.filter(s => s.result !== "OFF_TARGET");
+        const saves = shots.filter(s => s.result === "SAVE" || s.result === "PARRY" || s.result === "BLOCK").length;
+        const goals = shots.filter(s => s.result === "GOAL").length;
+        const totalXg = shots.reduce((a, s) => a + Number(s.xg || 0), 0);
+        const savePct = onTarget.length > 0 ? Math.round((saves / onTarget.length) * 100) : null;
+
+        document.getElementById("savePct").textContent = savePct === null ? "-" : savePct + "%";
+        document.getElementById("sumShots").textContent = shots.length;
+        document.getElementById("sumGoals").textContent = goals;
+        document.getElementById("sumXg").textContent = totalXg.toFixed(1);
+
+        const delta = totalXg - goals;
+        const deltaEl = document.getElementById("xgDelta");
+        if (shots.length === 0) {
+          deltaEl.style.display = "none";
+        } else {
+          deltaEl.style.display = "inline-block";
+          if (delta >= 0) {
+            deltaEl.className = "xg-delta pos";
+            deltaEl.textContent = "+" + delta.toFixed(1) + " goals prevented vs xG - performing above expected";
+          } else {
+            deltaEl.className = "xg-delta neg";
+            deltaEl.textContent = delta.toFixed(1) + " vs xG - conceded more than expected";
+          }
+        }
+
+        renderHeatgrid(shots);
+        renderOriginMap(shots);
+      }
+
+      function renderHeatgrid(shots) {
+        const svg = document.getElementById("heatgridSvg");
+        const targeted = shots.filter(s => s.target);
+        const cols = 3, rows = 2;
+        const gx = 20, gy = 20, gw = 260, gh = 110;
+        const cw = gw / cols, ch = gh / rows;
+
+        const buckets = [];
+        for (let r = 0; r < rows; r++) {
+          buckets.push([]);
+          for (let c = 0; c < cols; c++) buckets[r].push([]);
+        }
+
+        targeted.forEach(s => {
+          let c = Math.floor((s.target.x - gx) / cw);
+          let r = Math.floor((s.target.y - gy) / ch);
+          c = Math.max(0, Math.min(cols - 1, c));
+          r = Math.max(0, Math.min(rows - 1, r));
+          buckets[r][c].push(s);
+        });
+
+        let marks = "";
+        marks += '<rect x="' + gx + '" y="' + gy + '" width="' + gw + '" height="' + gh + '" fill="none" stroke="#F5F2EA" stroke-opacity="0.6" stroke-width="2.5"/>';
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cell = buckets[r][c];
+            const x = gx + c * cw;
+            const y = gy + r * ch;
+            let fill = "rgba(139,132,120,0.3)";
+            let label = "-";
+
+            if (cell.length > 0) {
+              const saved = cell.filter(s => s.result === "SAVE" || s.result === "PARRY" || s.result === "BLOCK").length;
+              const pct = saved / cell.length;
+              fill = pct > 0.5 ? "rgba(91,168,124,0.65)" : "rgba(232,163,61,0.65)";
+              label = Math.round(pct * 100) + "%";
+            }
+
+            marks += '<rect x="' + (x + 1) + '" y="' + (y + 1) + '" width="' + (cw - 2) + '" height="' + (ch - 2) + '" fill="' + fill + '" stroke="#000" stroke-width="1"/>';
+            marks += '<text x="' + (x + cw / 2) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="middle" font-family="monospace" font-size="13" font-weight="700" fill="#fff">' + label + '</text>';
+            if (cell.length > 0) {
+              marks += '<text x="' + (x + cw / 2) + '" y="' + (y + ch / 2 + 18) + '" text-anchor="middle" font-family="monospace" font-size="8" fill="rgba(255,255,255,0.75)">' + cell.length + " shot" + (cell.length > 1 ? "s" : "") + '</text>';
+            }
+          }
+        }
+
+        marks += '<line x1="0" y1="130" x2="300" y2="130" stroke="#F5F2EA" stroke-opacity="0.5" stroke-width="2.5"/>';
+        const offCount = shots.filter(s => s.result === "OFF_TARGET").length;
+        marks += '<text x="150" y="158" text-anchor="middle" font-family="monospace" font-size="10" fill="rgba(245,242,234,0.7)">' + offCount + " shot" + (offCount !== 1 ? "s" : "") + " off target</text>";
+
+        svg.innerHTML = marks;
+      }
+
+      function renderOriginMap(shots) {
+        const svg = document.getElementById("originMapSvg");
+        let marks = "";
+        marks += '<rect x="40" y="0" width="220" height="120" fill="none" stroke="#F5F2EA" stroke-opacity="0.4" stroke-width="2.5"/>';
+        marks += '<rect x="105" y="0" width="90" height="45" fill="none" stroke="#F5F2EA" stroke-opacity="0.5" stroke-width="2.5"/>';
+        marks += '<rect x="120" y="-6" width="60" height="8" fill="#F5F2EA" fill-opacity="0.85"/>';
+        marks += '<path d="M 110 120 A 40 40 0 0 0 190 120" fill="none" stroke="#F5F2EA" stroke-opacity="0.4" stroke-width="2.5"/>';
+
+        shots.forEach(s => {
+          const color =
+            s.result === "GOAL" ? "#E8A33D" :
+            s.result === "OFF_TARGET" ? "#8B8478" :
+            s.result === "BLOCK" ? "#5B8AA8" :
+            "#5BA87C";
+          const r = 3 + Number(s.xg || 0) * 6;
+          marks += '<circle cx="' + s.origin.x + '" cy="' + s.origin.y + '" r="' + r.toFixed(1) + '" fill="' + color + '" opacity="0.7" stroke="#000" stroke-width="0.5"/>';
+        });
+
+        svg.innerHTML = marks;
+      }
+
+      function renderHistory() {
+        const wrap = document.getElementById("historyList");
+
+        if (matches.length === 0) {
+          wrap.innerHTML = '<div class="empty-state"><div class="big">No matches yet</div>Start logging shots on the Live tab</div>';
+          return;
+        }
+
+        let html = "";
+        matches.forEach(m => {
+          const onTarget = m.shots.filter(s => s.result !== "OFF_TARGET");
+          const saves = onTarget.filter(s => s.result === "SAVE" || s.result === "PARRY" || s.result === "BLOCK").length;
+          const goals = m.shots.filter(s => s.result === "GOAL").length;
+          const xg = m.shots.reduce((a, s) => a + Number(s.xg || 0), 0);
+          const pct = onTarget.length > 0 ? Math.round((saves / onTarget.length) * 100) : null;
+          const dateStr = new Date(m.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+          const isCurrent = m.id === currentMatchId;
+
+          html += '<div class="match-card" data-id="' + m.id + '">' +
+            '<div class="match-card-top">' +
+              '<div class="opp">' + (m.opponent ? "vs " + escapeHtml(m.opponent) : "Unnamed match") + (isCurrent ? ' <span style="color:var(--goal-amber); font-size:10px;">- current</span>' : "") + '</div>' +
+              '<button class="del-match" data-id="' + m.id + '">Delete</button>' +
+            '</div>' +
+            '<div class="date" style="margin-bottom:8px;">' + dateStr + '</div>' +
+            '<div class="match-card-stats">' +
+              '<div><b>' + m.shots.length + '</b> shots</div>' +
+              '<div><b>' + saves + '</b> saves</div>' +
+              '<div><b>' + goals + '</b> goals</div>' +
+              '<div><b>' + xg.toFixed(1) + '</b> xG</div>' +
+              '<div><b>' + (pct === null ? "-" : pct + "%") + '</b> save%</div>' +
+            '</div>' +
+          '</div>';
+        });
+
+        wrap.innerHTML = html;
+
+        wrap.querySelectorAll(".match-card").forEach(card => {
+          card.addEventListener("click", function(e) {
+            if (e.target.classList.contains("del-match")) return;
+            currentMatchId = card.dataset.id;
+            persistAll();
+            resetPending();
+            renderLiveStats();
+            renderShotLog();
+            renderPitch();
+            renderStats();
+            document.querySelector('.tab-btn[data-tab="live"]').click();
+          });
+        });
+
+        wrap.querySelectorAll(".del-match").forEach(btn => {
+          btn.addEventListener("click", function(e) {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (!confirm("Delete this match permanently?")) return;
+
+            matches = matches.filter(m => m.id !== id);
+
+            if (matches.length === 0) {
+              const m = newMatch("");
+              currentMatchId = m.id;
+            } else if (currentMatchId === id) {
+              currentMatchId = matches[0].id;
+            }
+
+            persistAll();
+            resetPending();
+            renderHistory();
+            renderLiveStats();
+            renderShotLog();
+            renderPitch();
+            renderStats();
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function csvEscape(value) {
+        const str = String(value ?? "");
+        if (str.includes('"') || str.includes(",") || str.includes("\n")) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      }
+
+      function exportAllStatsCsv() {
+        const rows = [
+          [
+            "match_id",
+            "match_date",
+            "opponent",
+            "shot_id",
+            "shot_time",
+            "result",
+            "xg",
+            "off_target",
+            "origin_x",
+            "origin_y",
+            "target_x",
+            "target_y",
+            "origin_zone"
+          ]
+        ];
+
+        matches.forEach(match => {
+          if (!match.shots.length) {
+            rows.push([
+              match.id,
+              match.date,
+              match.opponent || "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]);
+            return;
+          }
+
+          match.shots.forEach(shot => {
+            rows.push([
+              match.id,
+              match.date,
+              match.opponent || "",
+              shot.id,
+              shot.time || "",
+              shot.result || "",
+              Number(shot.xg || 0).toFixed(2),
+              shot.offTarget ? "true" : "false",
+              shot.origin ? shot.origin.x : "",
+              shot.origin ? shot.origin.y : "",
+              shot.target ? shot.target.x : "",
+              shot.target ? shot.target.y : "",
+              shot.origin ? describeOrigin(shot.origin) : ""
+            ]);
+          });
+        });
+
+        const csv = rows.map(row => row.map(csvEscape).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const date = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = "charlies-goalkeeper-xg-" + date + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      document.getElementById("pitchSvg").addEventListener("click", function(e) {
+        const svg = e.currentTarget;
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const x = Math.max(2, Math.min(298, loc.x));
+        const y = Math.max(2, Math.min(216, loc.y));
+
+        pendingShot = {
+          origin: { x, y },
+          target: null,
+          offTarget: false,
+          xg: calcXG(x, y)
+        };
+
+        document.getElementById("xgPreview").innerHTML = '<span class="xg-badge">xG ' + pendingShot.xg.toFixed(2) + '</span>';
+        document.getElementById("stepNum").textContent = "2";
+        document.getElementById("pitchHint").textContent = "Tap again to move the origin, or continue below";
+        document.getElementById("goalWrap").classList.add("active");
+        document.getElementById("xgBadgeGoal").textContent = "xG " + pendingShot.xg.toFixed(2);
+        document.getElementById("outcomeWrap").classList.remove("active");
+        renderPitch();
+        renderGoal();
+        document.getElementById("goalWrap").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      document.getElementById("goalSvg").addEventListener("click", function(e) {
+        if (!pendingShot) return;
+        const svg = e.currentTarget;
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const x = Math.max(20, Math.min(280, loc.x));
+        const y = Math.max(20, Math.min(130, loc.y));
+
+        pendingShot.target = { x, y };
+        pendingShot.offTarget = false;
+        renderGoal();
+        document.getElementById("stepNum").textContent = "3";
+        document.getElementById("pitchHint").textContent = "Now log the outcome below";
+        document.getElementById("outcomeWrap").classList.add("active");
+        document.getElementById("outcomeWrap").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      document.getElementById("offTargetBtn").addEventListener("click", function() {
+        if (!pendingShot) return;
+        pendingShot.target = null;
+        pendingShot.offTarget = true;
+        document.getElementById("pitchHint").textContent = "Off target - shot logged";
+        addShot("OFF_TARGET");
+      });
+
+      document.querySelectorAll(".outcome-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          addShot(btn.dataset.result);
+        });
+      });
+
+      document.getElementById("cancelShotBtn").addEventListener("click", resetPending);
+
+      document.getElementById("oppInput").addEventListener("input", function() {
+        const m = getCurrentMatch();
+        if (!m) return;
+        m.opponent = this.value;
+        persistAll();
+        renderHistory();
+        renderLiveStats();
+      });
+
+      document.getElementById("newMatchBtn").addEventListener("click", function() {
+        const ok = confirm("Start a new match? Your current match is saved in History.");
+        if (!ok) return;
+
+        const m = newMatch("");
+        currentMatchId = m.id;
+        persistAll();
+        resetPending();
+        renderLiveStats();
+        renderShotLog();
+        renderPitch();
+        renderStats();
+        renderHistory();
+        document.getElementById("oppInput").focus();
+      });
+
+      document.getElementById("exportCsvBtn").addEventListener("click", exportAllStatsCsv);
+
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll("main section").forEach(s => s.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+
+          if (btn.dataset.tab === "stats") renderStats();
+          if (btn.dataset.tab === "history") renderHistory();
+        });
+      });
+
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          statsFilter = btn.dataset.filter;
+          renderStats();
+        });
+      });
+
+      renderPitch();
+      renderGoal();
+      renderLiveStats();
+      renderShotLog();
+      renderStats();
+      renderHistory();
+    })();
+  </script>
+</body>
+</html>
